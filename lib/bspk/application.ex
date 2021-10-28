@@ -7,18 +7,37 @@ defmodule Bspk.Application do
 
   @impl true
   def start(_type, _args) do
+    redis_uri = System.get_env("REDIS_URL", "redis://localhost:6379")
+    socket_opts = Application.get_env(:bspk, :redix_socket_opts)
+
     children = [
-      # Start the Ecto repository
-      Bspk.Repo,
       # Start the Telemetry supervisor
       BspkWeb.Telemetry,
       # Start the PubSub system
       {Phoenix.PubSub, name: Bspk.PubSub},
       # Start the Endpoint (http/https)
-      BspkWeb.Endpoint
+      BspkWeb.Endpoint,
       # Start a worker by calling: Bspk.Worker.start_link(arg)
-      # {Bspk.Worker, arg}
+      %{
+        id: Bspk.Redix,
+        start: {Redix, :start_link, [redis_uri, [name: Bspk.Redix, socket_opts: socket_opts]]}
+      },
+      %{
+        id: Bspk.Redix.PubSub,
+        start: {Redix.PubSub, :start_link, [redis_uri, [name: Bspk.Redix.PubSub, socket_opts: socket_opts]]},
+        restart: :permanent,
+        shutdown: 5_000,
+        type: :worker
+      },
+      {Bspk.RedisStream.Starter, []},
+      {BspkWeb.Tracker, [name: BspkWeb.Tracker, pubsub_server: Bspk.PubSub]}
     ]
+
+    children = if Application.get_env(:bspk, :load_repo) do
+      [Bspk.Repo | children]
+    else
+      children
+    end
 
     # See https://hexdocs.pm/elixir/Supervisor.html
     # for other strategies and supported options

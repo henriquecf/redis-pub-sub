@@ -46,6 +46,18 @@ config :logger, :console,
 # Use Jason for JSON parsing in Phoenix
 config :phoenix, :json_library, Jason
 
+config :phoenix, :filter_parameters, ["password", "token"]
+
+config :bspk, Bspk.Guardian,
+  issuer: "BSPK",
+  secret_key: System.get_env("BSPK_JWT_SECRET", "c5692ea90098707a70bcc12e6839fb91855b9b4d9baff3fc59e3137e061c9fbde4b1fbd5d28b9d0d7a377cd063b1d390a8076e2092004c21f19cb7f29800ec2e"),
+  allowed_algos: ["HS512"]
+
+config :bspk,
+  load_repo: false
+
+config :bspk, redix_socket_opts: []
+
 # Import environment specific config. This must remain at the bottom
 # of this file so it overrides the configuration defined above.
 import_config "#{config_env()}.exs"

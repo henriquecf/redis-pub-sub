@@ -1,5 +1,6 @@
 defmodule BspkWeb.Router do
   use BspkWeb, :router
+  import Phoenix.LiveDashboard.Router
 
   pipeline :browser do
     plug :accepts, ["html"]
@@ -14,6 +15,10 @@ defmodule BspkWeb.Router do
     plug :accepts, ["json"]
   end
 
+  pipeline :admins_only do
+    plug :admin_basic_auth
+  end
+
   scope "/", BspkWeb do
     pipe_through :browser
 
@@ -25,20 +30,9 @@ defmodule BspkWeb.Router do
   #   pipe_through :api
   # end
 
-  # Enables LiveDashboard only for development
-  #
-  # If you want to use the LiveDashboard in production, you should put
-  # it behind authentication and allow only admins to access it.
-  # If your application does not have an admins-only section yet,
-  # you can use Plug.BasicAuth to set up some basic authentication
-  # as long as you are also using SSL (which you should anyway).
-  if Mix.env() in [:dev, :test] do
-    import Phoenix.LiveDashboard.Router
-
-    scope "/" do
-      pipe_through :browser
-      live_dashboard "/dashboard", metrics: BspkWeb.Telemetry
-    end
+  scope "/" do
+    pipe_through [:browser, :admins_only]
+    live_dashboard "/dashboard", metrics: BspkWeb.Telemetry
   end
 
   # Enables the Swoosh mailbox preview in development.
@@ -51,5 +45,11 @@ defmodule BspkWeb.Router do
 
       forward "/mailbox", Plug.Swoosh.MailboxPreview
     end
+  end
+
+  defp admin_basic_auth(conn, _opts) do
+    username = System.get_env("AUTH_USERNAME", "bspk")
+    password = System.get_env("AUTH_PASSWORD", "Asdf1234$$")
+    Plug.BasicAuth.basic_auth(conn, username: username, password: password)
   end
 end

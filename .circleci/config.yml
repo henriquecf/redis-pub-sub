@@ -1,0 +1,101 @@
+version: 2  # use CircleCI 2.0 instead of CircleCI Classic
+jobs:  # basic units of work in a run
+  build-test:  # runs not using Workflows must have a `build` job as entry point
+    parallelism: 1  # run only one instance of this job
+    docker:  # run the steps with Docker
+      - image: circleci/elixir:1.12.3  # ...with this image as the primary container; this is where all `steps` will run
+        environment:  # environment variables for primary container
+          MIX_ENV: test
+      - image: circleci/postgres:11.13-stretch-postgis-ram  # database image
+        environment:  # environment variables for database
+          POSTGRES_USER: postgres
+          POSTGRES_DB: bspk_pubsub_test
+          POSTGRES_PASSWORD: postgres
+      - image: circleci/redis:6.0-alpine
+
+    working_directory: ~/app  # directory where steps will run
+
+    steps:  # commands that comprise the `build` job
+      - checkout  # check out source code to working directory
+
+      - run: mix local.hex --force  # install Hex locally (without prompt)
+      - run: mix local.rebar --force  # fetch a copy of rebar (without prompt)
+
+      - run: sudo apt-get install postgresql-client-11
+
+      - restore_cache:  # restores saved mix cache
+      # Read about caching dependencies: https://circleci.com/docs/2.0/caching/
+          keys:  # list of cache keys, in decreasing specificity
+            - v1-mix-cache-{{ .Branch }}-{{ checksum "mix.lock" }}
+            - v1-mix-cache-{{ .Branch }}
+            - v1-mix-cache
+      - restore_cache:  # restores saved build cache
+          keys:
+            - v1-build-cache-{{ .Branch }}
+            - v1-build-cache
+      - run: mix do deps.get, compile  # get updated dependencies & compile them
+      - save_cache:  # generate and store mix cache
+          key: v1-mix-cache-{{ .Branch }}-{{ checksum "mix.lock" }}
+          paths: "deps"
+      - save_cache: # don't forget to save a *build* cache, too
+          key: v1-build-cache-{{ .Branch }}
+          paths: "_build"
+
+      - run:  # special utility that stalls main process until DB is ready
+          name: Wait for DB
+          command: dockerize -wait tcp://localhost:5432 -timeout 1m
+
+      - run:  # special utility that stalls main process until DB is ready
+          name: Wait for Redis
+          command: dockerize -wait tcp://localhost:6379 -timeout 1m
+
+      - run: mix test  # run all tests in project
+
+      - store_test_results:  # upload junit test results for display in Test Summary
+          # Read more: https://circleci.com/docs/2.0/collect-test-data/
+          path: _build/test/lib/bspk # Replace with the name of your :app
+  deploy-dev2:
+    docker:
+      - image: circleci/elixir:1.12.3
+    steps:
+      - checkout
+      - run: git remote add gigalixir https://$GIGALIXIR_EMAIL:$GIGALIXIR_API_KEY@git.gigalixir.com/$APP_NAME_DEV2.git
+      - run: git push -f gigalixir dev2:master
+  deploy-staging:
+    docker:
+      - image: circleci/elixir:1.12.3
+    steps:
+      - checkout
+      - run: git remote add gigalixir https://$GIGALIXIR_EMAIL:$GIGALIXIR_API_KEY@git.gigalixir.com/$APP_NAME_STAGING.git
+      - run: git push -f gigalixir master
+  deploy-prod:
+    docker:
+      - image: circleci/elixir:1.12.3
+    steps:
+      - checkout
+      - run: git remote add gigalixir https://$GIGALIXIR_EMAIL:$GIGALIXIR_API_KEY@git.gigalixir.com/$APP_NAME_PROD.git
+      - run: git push -f gigalixir master
+
+workflows:
+  version: 2
+  build-test-deploy:
+    jobs:
+      - build-test
+      - deploy-dev2:
+          requires:
+            - build-test
+          filters:
+            branches:
+              only: dev2
+      - deploy-staging:
+          requires:
+            - build-test
+          filters:
+            branches:
+              only: master
+      - deploy-prod:
+          requires:
+            - build-test
+          filters:
+            branches:
+              only: master

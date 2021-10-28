@@ -8,7 +8,7 @@ import Config
 config :bspk, Bspk.Repo,
   username: "postgres",
   password: "postgres",
-  database: "bspk_test#{System.get_env("MIX_TEST_PARTITION")}",
+  database: "bspk_pubsub_test#{System.get_env("MIX_TEST_PARTITION")}",
   hostname: "localhost",
   pool: Ecto.Adapters.SQL.Sandbox,
   pool_size: 10
@@ -28,3 +28,6 @@ config :logger, level: :warn
 
 # Initialize plugs at runtime for faster test compilation
 config :phoenix, :plug_init_mode, :runtime
+
+config :bspk,
+  load_repo: true

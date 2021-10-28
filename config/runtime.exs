@@ -15,7 +15,7 @@ if config_env() == :prod do
       """
 
   config :bspk, Bspk.Repo,
-    # ssl: true,
+    ssl: true,
     # socket_options: [:inet6],
     url: database_url,
     pool_size: String.to_integer(System.get_env("POOL_SIZE") || "10")
@@ -25,12 +25,12 @@ if config_env() == :prod do
   # want to use a different value for prod and you most likely don't want
   # to check this value into version control, so we use an environment
   # variable instead.
-  secret_key_base =
-    System.get_env("SECRET_KEY_BASE") ||
-      raise """
-      environment variable SECRET_KEY_BASE is missing.
-      You can generate one by calling: mix phx.gen.secret
-      """
+  secret_key_base = System.get_env("SECRET_KEY_BASE")
+    # System.get_env("SECRET_KEY_BASE") ||
+    #   raise """
+    #   environment variable SECRET_KEY_BASE is missing.
+    #   You can generate one by calling: mix phx.gen.secret
+    #   """
 
   config :bspk, BspkWeb.Endpoint,
     http: [
@@ -39,9 +39,11 @@ if config_env() == :prod do
       # See the documentation on https://hexdocs.pm/plug_cowboy/Plug.Cowboy.html
       # for details about using IPv6 vs IPv4 and loopback vs public addresses.
       ip: {0, 0, 0, 0, 0, 0, 0, 0},
-      port: String.to_integer(System.get_env("PORT") || "4000")
+      port: {:system, "PORT"}
     ],
-    secret_key_base: secret_key_base
+    url: [host: System.get_env("BSPK_URL", System.get_env("APP_NAME") <> ".gigalixirapp.com"), port: 443, scheme: "https"],
+    secret_key_base: secret_key_base,
+    server: true
 
   # ## Using releases
   #

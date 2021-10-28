@@ -21,37 +21,47 @@ defmodule BspkWeb.Telemetry do
 
   def metrics do
     [
+      # Presence Metrics
+      last_value("bspk.presence.total",
+        description: "Total amount of connected users on Company channel"
+      ),
+      counter("bspk.presence.join.system_time",
+        tags: [:sales_associate_id]
+      ),
+      counter("bspk.presence.leave.system_time",
+        tags: [:sales_associate_id]
+      ),
+
       # Phoenix Metrics
       summary("phoenix.endpoint.stop.duration",
         unit: {:native, :millisecond}
       ),
       summary("phoenix.router_dispatch.stop.duration",
-        tags: [:route],
         unit: {:native, :millisecond}
       ),
 
       # Database Metrics
-      summary("bspk.repo.query.total_time",
-        unit: {:native, :millisecond},
-        description: "The sum of the other measurements"
-      ),
-      summary("bspk.repo.query.decode_time",
-        unit: {:native, :millisecond},
-        description: "The time spent decoding the data received from the database"
-      ),
-      summary("bspk.repo.query.query_time",
-        unit: {:native, :millisecond},
-        description: "The time spent executing the query"
-      ),
-      summary("bspk.repo.query.queue_time",
-        unit: {:native, :millisecond},
-        description: "The time spent waiting for a database connection"
-      ),
-      summary("bspk.repo.query.idle_time",
-        unit: {:native, :millisecond},
-        description:
-          "The time the connection spent waiting before being checked out for the query"
-      ),
+      # summary("bspk.repo.query.total_time",
+      #   unit: {:native, :millisecond},
+      #   description: "The sum of the other measurements"
+      # ),
+      # summary("bspk.repo.query.decode_time",
+      #   unit: {:native, :millisecond},
+      #   description: "The time spent decoding the data received from the database"
+      # ),
+      # summary("bspk.repo.query.query_time",
+      #   unit: {:native, :millisecond},
+      #   description: "The time spent executing the query"
+      # ),
+      # summary("bspk.repo.query.queue_time",
+      #   unit: {:native, :millisecond},
+      #   description: "The time spent waiting for a database connection"
+      # ),
+      # summary("bspk.repo.query.idle_time",
+      #   unit: {:native, :millisecond},
+      #   description:
+      #     "The time the connection spent waiting before being checked out for the query"
+      # ),
 
       # VM Metrics
       summary("vm.memory.total", unit: {:byte, :kilobyte}),
