@@ -17,8 +17,6 @@ config :bspk, BspkWeb.Endpoint,
 # Do not print debug messages in production
 config :logger, level: :info
 
-config :bspk, redix_socket_opts: [verify: :verify_none]
-
 # ## SSL Support
 #
 # To get SSL working, you will need to add the `https` key

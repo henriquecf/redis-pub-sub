@@ -8,7 +8,11 @@ defmodule Bspk.Application do
   @impl true
   def start(_type, _args) do
     redis_uri = System.get_env("REDIS_URL", "redis://localhost:6379")
-    socket_opts = Application.get_env(:bspk, :redix_socket_opts)
+    socket_opts = if String.starts_with?(redis_uri, "rediss://") do
+      [verify: :verify_none]
+    else
+      []
+    end
 
     children = [
       # Start the Telemetry supervisor
