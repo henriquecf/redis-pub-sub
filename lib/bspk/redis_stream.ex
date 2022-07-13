@@ -13,18 +13,27 @@ defmodule Bspk.RedisStream do
   end
 
   @impl true
-  def handle_info({:redix_pubsub, _pid, _subscription_ref, :psubscribed, %{pattern: "stream:*"}}, state) do
+  def handle_info(
+        {:redix_pubsub, _pid, _subscription_ref, :psubscribed, %{pattern: "stream:*"}},
+        state
+      ) do
     {:noreply, state}
   end
 
   @impl true
-  def handle_info({:redix_pubsub, _pid, _subscription_ref, :pmessage, %{channel: channel, pattern: "stream:*", payload: payload}}, state) do
+  def handle_info(
+        {:redix_pubsub, _pid, _subscription_ref, :pmessage,
+         %{channel: channel, pattern: "stream:*", payload: payload}},
+        state
+      ) do
     case Jason.decode(payload) do
       {:ok, decoded_payload} ->
         Phoenix.PubSub.broadcast(Bspk.PubSub, channel, {channel, decoded_payload})
+
       _ ->
         :error
     end
+
     {:noreply, state}
   end
 end
