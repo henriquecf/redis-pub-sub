@@ -1,19 +1,30 @@
-# Bspk
+# Redis PubSub
 
-To start your Phoenix server:
+Leveraging an app with an existing Redis service, we are able to receive messages using Redis PubSub and stream them over using Phoenix channels over a persistent websocket connection.
 
-  * Install dependencies with `mix deps.get`
-  * Create and migrate your database with `mix ecto.setup`
-  * Start Phoenix endpoint with `mix phx.server` or inside IEx with `iex -S mix phx.server`
+To test this, there is a snippet of code in `assets/js/app.js` that connects to one of the channels and prepends the messages received to the HTML.
 
-Now you can visit [`localhost:4000`](http://localhost:4000) from your browser.
+In order to send messages, we can run `iex -S mix phx.server` and run the following snippet:
 
-Ready to run in production? Please [check our deployment guides](https://hexdocs.pm/phoenix/deployment.html).
+```elixir
+for i <- 1..100 do
+  payload =
+    Jason.encode!(%{
+      model: "messages",
+      record: %{
+        id: "1",
+        is_deleted: false,
+        body: "Message #{i}"
+      }
+    })
 
-## Learn more
+  Redix.command!(Bspk.Redix, ["PUBLISH", "stream:companies:7", payload])
+  :timer.sleep(i * 200)
+end
+```
 
-  * Official website: https://www.phoenixframework.org/
-  * Guides: https://hexdocs.pm/phoenix/overview.html
-  * Docs: https://hexdocs.pm/phoenix
-  * Forum: https://elixirforum.com/c/phoenix-forum
-  * Source: https://github.com/phoenixframework/phoenix
+The main modules to look for in this project are:
+
+ - `redis_stream.ex` where we receive the messages published on Redis PubSub
+ - `company_channel.ex` where we authorize the given companies to connect to its stream
+ - `redis_stream/starter.ex` where we create a singleton Genserver across a cluster of Elixir apps
